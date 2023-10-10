@@ -9,13 +9,63 @@ library(tidyverse)
 ```
 
 ## Problem 1 
+This problem uses a cleaned and reduced version of a dataset entitled: "The Instacart Online Grocery Shopping Dataset 2017" that was accessed on June 24, 2017. As a leading online grocery service, Instacart allows you to shop online from local grocery stores and thus provides us with a dataset involving observations about each grocery order and its user. More specifically, the entire 2017 dataset is an anonymized dataset with over 3 million orders from over 200,000 users. With that, let's see what we can find out by using a more manageable version of the 2017 data... 
+
 ```{r}
 library(p8105.datasets)
 data("instacart")
-
 ```
 
-At first glance, the `instacart` data set consists of `r ncol(instacart)` columns and `r nrow(instacart)` observations. The information provided in this data set reveals characteristics of the buyer, their buying habits, the food order and the food products included. There is data included for a total of `r n_distinct(pull(instacart, order_id))` orders placed using the Instacart app. 
+At first glance, the `instacart` data set consists of `r ncol(instacart)` columns and `r nrow(instacart)` observations. The information provided in this data set reveals characteristics of the buyer, their buying habits, the food order and the food products included. There is data included for a total of `r n_distinct(pull(instacart, order_id))` orders placed using the Instacart app. Many of the variables in the dataset hold a collection of identification numbers for the order, the products, the customer,and the department and aisle in which the product is found. It is notable that the all of the orders in dataset we are using belong to the `train` evaluation set, indicated by the `eval_set` column. There is also informative time related data associated with the day of the week and hour of the day each order was placed. Most often, orders were placed on the  `r instacart |> pull(order_dow) |> DescTools::Mode()`th day of the week at `r instacart |> pull(order_hour_of_day) |> DescTools::Mode()`rd hour, which here means Sunday at 2pm. 
+
+Now to answer the questions for the homework assignment: 
+
+How many aisles are there, and which aisles are most items ordered from? 
+```{r}
+instacart |> 
+  group_by(aisle) |> 
+  summarize(count = n()) |> nrow()  # total aisles 
+
+instacart |> 
+  group_by(aisle) |> 
+  summarize(count = n()) |> top_n(3) # most ordered from aisle 
+```
+
+Thus, there are 134 total aisles and the top 3 most ordered from aisles are: fresh vegetables, fresh fruits and packages vegetables fruits. 
+
+Plot that shows the number of items ordered in each aisle: 
+```{r}
+instacart |> 
+  group_by(aisle, department) |> 
+  summarize(items = n()) |> 
+  filter(items > 1000) |> 
+  ggplot(aes(x = aisle, y = items)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+A little crowded, but gets the point across. Best viewed in Zoom panel due to number of aisles. 
+
+Table showing three most popular items in specified aisles and include number of orders for each: 
+```{r}
+instacart |> 
+  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) |> 
+  group_by(aisle, product_name) |> 
+  summarize(items = n()) |> 
+  top_n(3) |> 
+  knitr::kable(digits = 1)
+```
+
+Table showing mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week: 
+```{r}
+instacart |> 
+  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) |> 
+  group_by(product_name, order_dow) |> 
+  summarize(
+    mean_hour = mean(order_hour_of_day)
+  ) |> 
+  knitr::kable(digits = 1)
+```
 
 ## Problem 2 
 ```{r}
