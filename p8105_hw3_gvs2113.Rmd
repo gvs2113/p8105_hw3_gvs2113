@@ -1,11 +1,22 @@
 ---
 title: "p8105 Homework 3 (UNI:gvs2113)"
 output: github_document
-date: "2023-10-06"
+author: "Grace Santos"
+date: "2023-10-11"
 ---
 
 ```{r}
 library(tidyverse)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
 ```
 
 ## Problem 1 
@@ -49,7 +60,7 @@ A little crowded, but gets the point across. Best viewed in Zoom panel due to nu
 Table showing three most popular items in specified aisles and include number of orders for each: 
 ```{r}
 instacart |> 
-  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) |> 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) |> 
   group_by(aisle, product_name) |> 
   summarize(items = n()) |> 
   top_n(3) |> 
@@ -59,10 +70,12 @@ instacart |>
 Table showing mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week: 
 ```{r}
 instacart |> 
-  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) |> 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |> 
   group_by(product_name, order_dow) |> 
-  summarize(
-    mean_hour = mean(order_hour_of_day)
+  summarize(mean_hour = mean(order_hour_of_day)) |> 
+  pivot_wider(
+    names_from = order_dow, 
+    values_from = mean_hour
   ) |> 
   knitr::kable(digits = 1)
 ```
@@ -73,3 +86,63 @@ library(p8105.datasets)
 data("brfss_smart2010")
 ```
 
+Data Cleaning: 
+```{r}
+brfss_smart2010 = 
+brfss_smart2010 |> 
+  janitor::clean_names() |> 
+  filter( 
+    topic == "Overall Health",
+    response %in% c("Poor", "Fair", "Good", "Very Good", "Excellent")) |> 
+  mutate(response = factor(response, levels = c("Poor", "Fair", "Good", "Very Good", "Excellent"), ordered = TRUE))
+```
+
+In 2002 which states were observed at 7 or more locations? 
+```{r}
+brfss_smart2010 |> 
+  filter (year == "2002") |> 
+  group_by (locationabbr) |> 
+  summarize (locations = n_distinct(locationdesc)) |> 
+  filter (locations >= 7) 
+```
+In 2002, there were 6 states that were observed at 7 or more locations.
+
+In 2010?
+```{r}
+brfss_smart2010 |> 
+  filter (year == "2010") |> 
+  group_by (locationabbr) |> 
+  summarize (locations = n_distinct(locationdesc)) |> 
+  filter (locations >= 7) 
+```
+In 2010, there were 14 states that were observed at 7 or more locations. 
+
+Construct a dataset limited to "Excellent" responses and then make a "spaghetti" plot of average of `data_value` across locations within a state. 
+```{r}
+  brfss_smart2010 |> 
+  filter(response == "Excellent") |> 
+  group_by(year, locationabbr, locationdesc) |> 
+  summarize(avg_data_value = mean(data_value)) |> 
+  ggplot(aes(x = year, y = avg_data_value, group = locationabbr, color = locationabbr)) + geom_line() + 
+  labs (
+    title = " Average Data Value across locations within a state for Excellent Responses",
+    x = "Year",
+    y = "Average Data Value",
+    color = "State") 
+```
+
+Make a 2-panel plot showing distribution of `data_value` for responses among NY state locations 
+```{r}
+brfss_smart2010 |> 
+  filter(locationabbr == "NY", 
+         year %in% c("2006", "2010")) |> 
+  ggplot(aes(x = response , y = data_value, group = locationdesc, color = locationdesc)) + geom_line() +
+  facet_wrap(. ~ year) + 
+  labs( 
+    title = "2006 and 2010 Distribtion of Data Values by Responses among NY locations ",
+    x = "Respose",
+    y = "Data Value",
+    color = "Location")
+```
+
+## Problem 3 
