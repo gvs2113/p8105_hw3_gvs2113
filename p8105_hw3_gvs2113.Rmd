@@ -52,6 +52,7 @@ instacart |>
   filter(items > 1000) |> 
   ggplot(aes(x = aisle, y = items)) +
   geom_point() +
+  labs(title = "Number of items ordered in each aisle") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
@@ -146,3 +147,86 @@ brfss_smart2010 |>
 ```
 
 ## Problem 3 
+Load, tidy, merge and organize the datasets. 
+```{r}
+accel_data = 
+  read_csv("./data/nhanes_accel.csv")
+
+covar_data = 
+  read_csv("./data/nhanes_covar.csv", skip = 4, col_names = TRUE)
+
+mims_df = right_join(covar_data, accel_data, by = "SEQN")
+
+mims_df_2 = 
+  mims_df |> 
+    filter(age >= "21") |> 
+    drop_na() |> 
+    mutate( 
+      sex = case_match(
+        sex,
+        1 ~ "male", 
+        2 ~ "female"),
+      sex = as.factor(sex),
+      education = case_match(
+        education,
+        1 ~ "less than HS",
+        2 ~ "HS equivalent",
+        3 ~ "more than HS"),
+      education = factor(education, levels = c("less than HS","HS equivalent", "more than HS"), ordered = TRUE)
+      )
+```
+
+Produce a reader-friendly table for the number of men and women in each education category. 
+```{r}
+mims_df_2 |> 
+  group_by(sex, education) |> 
+  summarize(n = n()) |> 
+  pivot_wider(
+    names_from = education,
+    values_from = n) |> 
+  knitr::kable(digits = 2)
+```
+
+This table shows, that there are similar numbers in participants who have either less than or more than high school education. There is a much larger difference, in favor of male participants in the category of having a high school equivalent education. 
+
+Create a visualization of age distributions for men and women in each category.
+```{r}
+mims_df_2 |> 
+  ggplot(aes(x = education, y = age, fill = sex)) + geom_boxplot()
+```
+
+From the box plots generated, you can conclude that the median ages and overall spread of ages between males and females who have less education than high school are very similar. The largest spread and difference in median are between the ages of men and women who have high school equivalent education. The one case in which the male median is higher than the female median is for those with higher than high school education.  
+
+Aggregate across minutes to create a total activity variable for each participant over the whole day.
+```{r}
+mims_df_2 |> 
+  pivot_longer(
+    min1:min1440,
+    names_to = "total_activity",
+    names_prefix = "min",
+    values_to = "MIMS") |> 
+  mutate(total_activity = as.numeric(total_activity)) |> 
+  group_by(SEQN) |> 
+  ggplot(aes(x = age, y = total_activity, color = sex)) + geom_line() + geom_smooth(aes(group = sex)) + facet_grid(. ~ education) +
+  labs(
+    title = "Total Activity Variable for Each Participant by Age and Education Level"
+  )
+```
+
+
+Make a 3 panel plot that shows 24-hour activity time courses for each education level and color by sex.  
+```{r}
+mims_df_2 |> 
+  pivot_longer(
+    min1:min1440,
+    names_to = "total_activity",
+    names_prefix = "min",
+    values_to = "MIMS") |> 
+  mutate(total_activity = as.numeric(total_activity)) |> 
+  group_by(SEQN) |> 
+  ggplot(aes(x = total_activity, y = MIMS, color = sex)) + geom_line() + geom_smooth(aes(group = sex)) + facet_grid(. ~ education) + 
+  labs(
+    title = "24-hour activity time courses for each education level"
+  )
+```
+
